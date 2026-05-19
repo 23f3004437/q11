@@ -4,13 +4,9 @@ from typing import List
 
 app = FastAPI()
 
-
-# -------- Request Model --------
 class SentimentRequest(BaseModel):
     sentences: List[str]
 
-
-# -------- Sentiment Logic --------
 def detect_sentiment(text: str) -> str:
     text = text.lower()
 
@@ -37,23 +33,24 @@ def detect_sentiment(text: str) -> str:
     return "neutral"
 
 
-# -------- API Endpoint --------
 @app.post("/sentiment")
 async def sentiment(data: SentimentRequest):
+    results = []
 
-    results = [
-        {
-            "sentence": s,
-            "sentiment": detect_sentiment(s)
-        }
-        for s in data.sentences
-    ]
+    for sentence in data.sentences:
+        results.append({
+            "sentence": sentence,
+            "sentiment": detect_sentiment(sentence)
+        })
 
     return {"results": results}
 
 
-# -------- Run Server --------
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    import os
+
+    port = int(os.environ.get("PORT", 8000))
+
+    uvicorn.run(app, host="0.0.0.0", port=port)
     
