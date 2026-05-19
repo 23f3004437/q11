@@ -1,8 +1,17 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class SentimentRequest(BaseModel):
     sentences: List[str]
@@ -10,47 +19,23 @@ class SentimentRequest(BaseModel):
 def detect_sentiment(text: str) -> str:
     text = text.lower()
 
-    happy_words = [
-        "love", "great", "awesome", "happy", "good",
-        "excellent", "amazing", "wonderful", "best",
-        "fantastic", "nice"
-    ]
+    if any(w in text for w in ["love", "great", "awesome", "good", "amazing", "happy"]):
+        return "happy"
 
-    sad_words = [
-        "sad", "terrible", "bad", "hate", "awful",
-        "worst", "horrible", "angry", "upset",
-        "disappointed"
-    ]
-
-    for word in happy_words:
-        if word in text:
-            return "happy"
-
-    for word in sad_words:
-        if word in text:
-            return "sad"
+    if any(w in text for w in ["bad", "sad", "terrible", "hate", "worst"]):
+        return "sad"
 
     return "neutral"
 
+@app.get("/")
+def root():
+    return {"status": "ok"}
 
 @app.post("/sentiment")
-async def sentiment(data: SentimentRequest):
-    results = []
-
-    for sentence in data.sentences:
-        results.append({
-            "sentence": sentence,
-            "sentiment": detect_sentiment(sentence)
-        })
-
-    return {"results": results}
-
-
-if __name__ == "__main__":
-    import uvicorn
-    import os
-
-    port = int(os.environ.get("PORT", 8000))
-
-    uvicorn.run(app, host="0.0.0.0", port=port)
-    
+def sentiment(req: SentimentRequest):
+    return {
+        "results": [
+            {"sentence": s, "sentiment": detect_sentiment(s)}
+            for s in req.sentences
+        ]
+    }
