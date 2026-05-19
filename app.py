@@ -1,49 +1,52 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
 
 app = FastAPI()
 
-# ✅ Fixes "Failed to fetch" / OPTIONS / CORS issues
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
-# ---------- Models ----------
 class SentimentRequest(BaseModel):
     sentences: List[str]
 
-# ---------- Root endpoint (IMPORTANT for graders) ----------
-@app.get("/")
-def root():
-    return {"status": "ok"}
 
-# ---------- Sentiment logic ----------
+@app.get("/")
+def home():
+    return {"message": "API is running"}
+
+
 def detect_sentiment(text: str) -> str:
     text = text.lower()
 
-    if any(w in text for w in ["love", "great", "awesome", "good", "amazing", "happy"]):
-        return "happy"
+    happy_words = [
+        "love", "great", "awesome", "happy", "good",
+        "excellent", "amazing", "wonderful", "best",
+        "fantastic", "nice"
+    ]
 
-    if any(w in text for w in ["bad", "sad", "terrible", "hate", "worst", "horrible"]):
-        return "sad"
+    sad_words = [
+        "sad", "terrible", "bad", "hate", "awful",
+        "worst", "horrible", "angry", "upset",
+        "disappointed"
+    ]
+
+    for w in happy_words:
+        if w in text:
+            return "happy"
+
+    for w in sad_words:
+        if w in text:
+            return "sad"
 
     return "neutral"
 
-# ---------- Main endpoint ----------
+
 @app.post("/sentiment")
 def sentiment(req: SentimentRequest):
-    return {
-        "results": [
-            {
-                "sentence": s,
-                "sentiment": detect_sentiment(s)
-            }
-            for s in req.sentences
-        ]
-    }
+    results = [
+        {
+            "sentence": s,
+            "sentiment": detect_sentiment(s)
+        }
+        for s in req.sentences
+    ]
+    return {"results": results}
